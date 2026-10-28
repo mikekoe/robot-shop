@@ -2,4 +2,4 @@
 .DS_Store
 *-private.*
 vendor/
-Gopkg.lock
+Gopkg.lockalertmanager-slack.yaml
