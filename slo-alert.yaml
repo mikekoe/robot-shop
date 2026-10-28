@@ -1,0 +1,58 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: catalogue-slo
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: catalogue.slo
+      interval: 30s
+      rules:
+        - alert: CatalogueDown
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="robot-shop",
+              deployment="catalogue"
+            } == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: catalogue
+          annotations:
+            summary: "Catalogue service is down"
+            description: "Catalogue has 0 available replicas. SLO breached."
+
+        - alert: CatalogueErrorBudgetBurn
+          expr: |
+            increase(kube_pod_container_status_restarts_total{
+              namespace="robot-shop",
+              pod=~"catalogue-.*"
+            }[1h]) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: catalogue
+          annotations:
+            summary: "Catalogue error budget burning fast"
+            description: "Catalogue has restarted more than 2 times in the last hour."
+
+        - alert: CatalogueSLOAtRisk
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="robot-shop",
+              deployment="catalogue"
+            }
+            /
+            kube_deployment_spec_replicas{
+              namespace="robot-shop",
+              deployment="catalogue"
+            } < 0.99
+          for: 2m
+          labels:
+            severity: warning
+            service: catalogue
+          annotations:
+            summary: "Catalogue availability below SLO"
+            description: "Catalogue availability has dropped below 99% SLO target."
